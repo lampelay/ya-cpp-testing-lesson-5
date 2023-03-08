@@ -7,9 +7,9 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "*.cpp",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}.out",
+                "${fileDirname}/a.out",
                 "--std=c++17"
             ],
             "options": {

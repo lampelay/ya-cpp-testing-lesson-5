@@ -8,7 +8,7 @@
             "name": "(gdb) Запустить",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}.out",
+            "program": "${fileDirname}/a.out",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
