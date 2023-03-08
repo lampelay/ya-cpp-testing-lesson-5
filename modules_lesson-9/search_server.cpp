@@ -1,4 +1,6 @@
 #include <numeric>
+#include <cmath>
+#include <algorithm>
 
 #include "search_server.h"
 
@@ -12,6 +14,15 @@ int ComputeAverageRating(const std::vector<int> &ratings)
     }
     const int sum = std::accumulate(ratings.begin(), ratings.end(), 0);
     return sum / static_cast<int>(ratings.size());
+}
+
+bool SearchServer::IsValidWord(const std::string &word)
+{
+    return !word.empty() && word.at(0) != '-' &&
+           word.at(word.size() - 1) != '-' &&
+           std::none_of(word.begin(), word.end(),
+                        [](const char c)
+                        { return '\0' <= c && c < ' '; });
 }
 
 // SearchServer
@@ -145,8 +156,6 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(std::string text) const
     return QueryWord{text, is_minus, IsStopWord(text)};
 }
 
-
-
 SearchServer::Query SearchServer::ParseQuery(const std::string &text) const
 {
     Query query;
@@ -166,4 +175,11 @@ SearchServer::Query SearchServer::ParseQuery(const std::string &text) const
         }
     }
     return query;
+}
+
+// Existence required
+double SearchServer::ComputeWordInverseDocumentFreq(const std::string &word) const
+{
+    return std::log(GetDocumentCount() * 1.0 /
+                    word_to_document_freqs_.at(word).size());
 }

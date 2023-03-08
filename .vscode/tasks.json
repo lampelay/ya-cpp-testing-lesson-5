@@ -20,6 +20,17 @@
             ],
             "group": "build",
             "detail": "компилятор: /usr/bin/g++"
+        },
+        {
+            "type": "shell",
+            "label": "Delete C++ program",
+            "command": "rm",
+            "args": [
+                "${fileDirname}/a.out"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            }
         }
     ],
     "version": "2.0.0"

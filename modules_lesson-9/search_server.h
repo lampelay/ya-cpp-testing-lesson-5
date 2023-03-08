@@ -3,32 +3,9 @@
 #include <set>
 #include <vector>
 #include <map>
-#include <cmath>
-#include <algorithm>
 
 #include "string_processing.h"
 #include "document.h"
-
-using namespace std::string_literals;
-
-const int MAX_RESULT_DOCUMENT_COUNT = 5;
-const double EPSILON = 1e-6;
-
-template <typename StringContainer>
-std::set<std::string> MakeUniqueNonEmptyStrings(const StringContainer &strings)
-{
-    std::set<std::string> non_empty_strings;
-    for (const std::string &str : strings)
-    {
-        if (!str.empty())
-        {
-            non_empty_strings.insert(str);
-        }
-    }
-    return non_empty_strings;
-}
-
-int ComputeAverageRating(const std::vector<int> &ratings);
 
 class SearchServer
 {
@@ -93,66 +70,33 @@ private:
     Query ParseQuery(const std::string &text) const;
 
     // Existence required
-    double ComputeWordInverseDocumentFreq(const std::string &word) const
-    {
-        return log(GetDocumentCount() * 1.0 /
-                   word_to_document_freqs_.at(word).size());
-    }
+    double ComputeWordInverseDocumentFreq(const std::string &word) const;
 
     template <typename Predicate>
     std::vector<Document> FindAllDocuments(const Query &query,
-                                           const Predicate predicate) const
-    {
-        std::map<int, double> document_to_relevance;
-        for (const std::string &word : query.plus_words)
-        {
-            if (word_to_document_freqs_.count(word) == 0)
-            {
-                continue;
-            }
-            const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
-            for (const auto [document_id, term_freq] :
-                 word_to_document_freqs_.at(word))
-            {
-                const auto &doc = documents_.at(document_id);
-                if (predicate(document_id, doc.status, doc.rating))
-                {
-                    document_to_relevance[document_id] +=
-                        term_freq * inverse_document_freq;
-                }
-            }
-        }
+                                           const Predicate predicate) const;
 
-        for (const std::string &word : query.minus_words)
-        {
-            if (word_to_document_freqs_.count(word) == 0)
-            {
-                continue;
-            }
-            for (const auto [document_id, _] : word_to_document_freqs_.at(word))
-            {
-                document_to_relevance.erase(document_id);
-            }
-        }
-
-        std::vector<Document> matched_documents;
-        for (const auto [document_id, relevance] : document_to_relevance)
-        {
-            matched_documents.push_back(
-                {document_id, relevance, documents_.at(document_id).rating});
-        }
-        return matched_documents;
-    }
-
-    static bool IsValidWord(const std::string &word)
-    {
-        return !word.empty() && word.at(0) != '-' &&
-               word.at(word.size() - 1) != '-' &&
-               std::none_of(word.begin(), word.end(),
-                            [](const char c)
-                            { return '\0' <= c && c < ' '; });
-    }
+    static bool IsValidWord(const std::string &word);
 };
+
+// templates IMPL
+
+const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double EPSILON = 1e-6;
+
+template <typename StringContainer>
+std::set<std::string> MakeUniqueNonEmptyStrings(const StringContainer &strings)
+{
+    std::set<std::string> non_empty_strings;
+    for (const std::string &str : strings)
+    {
+        if (!str.empty())
+        {
+            non_empty_strings.insert(str);
+        }
+    }
+    return non_empty_strings;
+}
 
 template <typename StringContainer>
 SearchServer::SearchServer(const StringContainer &stop_words)
@@ -162,7 +106,7 @@ SearchServer::SearchServer(const StringContainer &stop_words)
     {
         if (!IsValidWord(word))
         {
-            throw std::invalid_argument(word + " is not valid stop-word"s);
+            throw std::invalid_argument(word + " is not valid stop-word");
         }
     }
 }
@@ -173,21 +117,68 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string &raw_quer
 {
     const Query query = ParseQuery(raw_query);
     std::vector<Document> matched_documents = FindAllDocuments(query, predicate);
-    std::sort(matched_documents.begin(), matched_documents.end(),
-         [](const Document &lhs, const Document &rhs)
-         {
-             if (std::abs(lhs.relevance - rhs.relevance) < EPSILON)
-             {
-                 return lhs.rating > rhs.rating;
-             }
-             else
-             {
-                 return lhs.relevance > rhs.relevance;
-             }
-         });
+    std::sort(
+        matched_documents.begin(),
+        matched_documents.end(),
+        [](const Document &lhs, const Document &rhs)
+        {
+            if (std::abs(lhs.relevance - rhs.relevance) < EPSILON)
+            {
+                return lhs.rating > rhs.rating;
+            }
+            else
+            {
+                return lhs.relevance > rhs.relevance;
+            }
+        });
     if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT)
     {
         matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+    }
+    return matched_documents;
+}
+
+template <typename Predicate>
+std::vector<Document> SearchServer::FindAllDocuments(const Query &query,
+                                                     const Predicate predicate) const
+{
+    std::map<int, double> document_to_relevance;
+    for (const std::string &word : query.plus_words)
+    {
+        if (word_to_document_freqs_.count(word) == 0)
+        {
+            continue;
+        }
+        const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
+        for (const auto [document_id, term_freq] :
+             word_to_document_freqs_.at(word))
+        {
+            const auto &doc = documents_.at(document_id);
+            if (predicate(document_id, doc.status, doc.rating))
+            {
+                document_to_relevance[document_id] +=
+                    term_freq * inverse_document_freq;
+            }
+        }
+    }
+
+    for (const std::string &word : query.minus_words)
+    {
+        if (word_to_document_freqs_.count(word) == 0)
+        {
+            continue;
+        }
+        for (const auto [document_id, _] : word_to_document_freqs_.at(word))
+        {
+            document_to_relevance.erase(document_id);
+        }
+    }
+
+    std::vector<Document> matched_documents;
+    for (const auto [document_id, relevance] : document_to_relevance)
+    {
+        matched_documents.push_back(
+            {document_id, relevance, documents_.at(document_id).rating});
     }
     return matched_documents;
 }

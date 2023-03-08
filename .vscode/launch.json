@@ -16,6 +16,7 @@
             "externalConsole": false,
             "MIMode": "gdb",
             "preLaunchTask": "C/C++: g++ сборка активного файла",
+            "postDebugTask": "Delete C++ program",
             "setupCommands": [
                 {
                     "description": "Включить автоматическое форматирование для gdb",
