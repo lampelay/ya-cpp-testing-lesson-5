@@ -873,7 +873,7 @@ void TestGetDocumentIndexCanThrowsOutOfRangeException() {
   THROWS(out_of_range);
 }
 
-void TestPagination() {}
+void TestPaginateContainer() {}
 
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {

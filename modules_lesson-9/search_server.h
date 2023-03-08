@@ -3,6 +3,7 @@
 #include <set>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 #include "string_processing.h"
 #include "document.h"

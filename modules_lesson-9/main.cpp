@@ -1,15 +1,7 @@
-#include <deque>
-
-/* решение задачи "Выводим результаты поиска страницами" из темы "Итераторы" */
-
-#include <algorithm>
-#include <cmath>
 #include <iostream>
 #include <map>
-#include <numeric>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "paginator.h"
@@ -17,6 +9,7 @@
 #include "string_processing.h"
 #include "document.h"
 #include "search_server.h"
+#include "request_queue.h"
 
 using namespace std;
 
@@ -556,7 +549,85 @@ void TestGetDocumentIndexCanThrowsOutOfRangeException()
   THROWS(out_of_range);
 }
 
-void TestPagination() {}
+void TestPaginateContainer()
+{
+  vector<int> container{1, 2, 3, 4, 5};
+  const auto pages = Paginate(container, 2);
+
+  // Должно получиться 3 страницы
+  // Первая и вторая должны содержать по два элемента,
+  // третья должна содержать один элемент
+
+  // Проверяем первую страницу
+  auto it = pages.begin();
+  auto element_it = it->begin();
+
+  ASSERT_EQUAL(1, *element_it);
+  ++element_it;
+  ASSERT_EQUAL(2, *element_it);
+  ++element_it;
+  ASSERT(element_it == it->end());
+
+  // Проверяем вторую страницу
+  ++it;
+  element_it = it->begin();
+
+  ASSERT_EQUAL(3, *element_it);
+  ++element_it;
+  ASSERT_EQUAL(4, *element_it);
+  ++element_it;
+  ASSERT(it->end() == element_it);
+
+  // Проверяем третью страницу
+  ++it;
+  element_it = it->begin();
+
+  ASSERT_EQUAL(5, *element_it);
+  ++element_it;
+  ASSERT(it->end() == element_it);
+
+  // Проверяем, что это была последняя страница
+  ++it;
+  ASSERT(pages.end() == it);
+}
+
+void TestAddDocumentToRequestQueue()
+{
+  SearchServer search_server;
+  RequestQueue request_queue(search_server);
+
+  search_server.AddDocument(1, "asd qwe", DocumentStatus::ACTUAL, {1, 2, 3});
+
+  vector<Document> result = request_queue.AddFindRequest("asd");
+
+  // Результат не пуст
+  ASSERT(!result.empty());
+  // и в очереди не появилось запросов с пустым результатом
+  ASSERT_EQUAL(0, request_queue.GetNoResultRequests());
+
+  result = request_queue.AddFindRequest("empty request");
+
+  // Результат пуст
+  ASSERT(result.empty());
+  // и в очереди появился один запрос с пустым результатом
+  ASSERT_EQUAL(1, request_queue.GetNoResultRequests());
+}
+
+void TestRemoveOldRequestsFromQueue()
+{
+  SearchServer search_server;
+  RequestQueue request_queue(search_server);
+
+  search_server.AddDocument(1, "valid", DocumentStatus::ACTUAL, {});
+  
+  for (int i = 0; i < 1440; ++i) {
+    request_queue.AddFindRequest("emptyresult");
+  }
+  ASSERT_EQUAL(1440, request_queue.GetNoResultRequests());
+
+  request_queue.AddFindRequest("valid");
+  ASSERT_EQUAL(1439, request_queue.GetNoResultRequests());
+}
 
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer()
@@ -577,107 +648,11 @@ void TestSearchServer()
   RUN_TEST(TestSearchServerConstructorThrowsExceptionIfStopWordIsInvalid);
   RUN_TEST(TestFindAllDocumentsThrowsExceptionIfQueryContainsInvalidWords);
   RUN_TEST(TestGetDocumentIndexCanThrowsOutOfRangeException);
+  RUN_TEST(TestPaginateContainer);
+  RUN_TEST(TestRemoveOldRequestsFromQueue);
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
-
-template <typename Container>
-auto Paginate(const Container &c, size_t page_size)
-{
-  return Paginator(begin(c), end(c), page_size);
-}
-
-/* конец решения */
-
-class RequestQueue
-{
-public:
-  explicit RequestQueue(const SearchServer &search_server)
-      : search_server_(search_server)
-  {
-    // напишите реализацию
-  }
-  // сделаем "обёртки" для всех методов поиска, чтобы сохранять результаты для нашей статистики
-  template <typename DocumentPredicate>
-  vector<Document> AddFindRequest(const string &raw_query, DocumentPredicate document_predicate)
-  {
-    // напишите реализацию
-    const vector<Document> documents = search_server_.FindTopDocuments(raw_query, document_predicate);
-    AddQueryResult({documents.empty()});
-    return documents;
-  }
-  vector<Document> AddFindRequest(const string &raw_query, DocumentStatus status)
-  {
-    // напишите реализацию
-    const vector<Document> documents = search_server_.FindTopDocuments(raw_query, status);
-    AddQueryResult({documents.empty()});
-    return documents;
-  }
-  vector<Document> AddFindRequest(const string &raw_query)
-  {
-    // напишите реализацию
-    const vector<Document> documents = search_server_.FindTopDocuments(raw_query);
-    AddQueryResult({documents.empty()});
-    return documents;
-  }
-  int GetNoResultRequests() const
-  {
-    // напишите реализацию
-    return no_result_requests_;
-  }
-
-private:
-  struct QueryResult
-  {
-    // определите, что должно быть в структуре
-    bool is_empty;
-    int timestamp;
-  };
-  deque<QueryResult> requests_;
-  const static int min_in_day_ = 1440;
-  // возможно, здесь вам понадобится что-то ещё
-
-  const SearchServer &search_server_;
-
-  int no_result_requests_ = 0;
-  int current_time = 0;
-
-  /**
-   * Общий метод для добавления результата поиска в очередь
-   */
-  void AddQueryResult(const bool empty)
-  {
-    // Добавляем результат в очередь
-    ++current_time;
-    requests_.push_back({empty, current_time});
-
-    // Если результат пустой, увеличиваем счётчик пустых результатов
-    if (empty)
-    {
-      ++no_result_requests_;
-    }
-
-    // Удаляем все результаты, время для которых превышает допустимое
-    while (!requests_.empty() && (current_time - requests_.front().timestamp) >= min_in_day_)
-    {
-      // Если удаляемый результат пустой, уменьшаем счётчик пустых результатов
-      if (requests_.front().is_empty && no_result_requests_ > 0)
-      {
-        --no_result_requests_;
-      }
-      requests_.pop_front();
-    }
-  }
-};
-
-
-int _main()
-{
-  TestSearchServer();
-  // Если вы видите эту строку, значит все тесты прошли успешно
-  cout << "Search server testing finished"s << endl;
-  return 0;
-}
 
 int main()
 {
@@ -700,5 +675,7 @@ int main()
   // первый запрос удален, 1437 запросов с нулевым результатом
   request_queue.AddFindRequest("sparrow"s);
   cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << endl;
-  return _main();
+
+  TestSearchServer();
+  return 0;
 }
