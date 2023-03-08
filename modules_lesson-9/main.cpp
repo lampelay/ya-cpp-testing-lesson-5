@@ -3,6 +3,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 #include "paginator.h"
 #include "read_input_functions.h"

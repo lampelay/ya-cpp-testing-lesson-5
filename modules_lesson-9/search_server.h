@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <set>
 #include <vector>
 #include <map>
