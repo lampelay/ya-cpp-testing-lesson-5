@@ -8,7 +8,7 @@
 #define PROFILE_CONCAT(X, Y) PROFILE_CONCAT_INTERNAL(X, Y)
 #define UNIQUE_VAR_NAME_PROFILE PROFILE_CONCAT(profileGuard, __LINE__)
 #define LOG_DURATION(x) LogDuration UNIQUE_VAR_NAME_PROFILE(x)
-#define LOG_DURATION_STREAM(x, os) LogDiration UNIQUE_VAR_NAME_PROFILE(x, os)
+#define LOG_DURATION_STREAM(x, os) LogDuration UNIQUE_VAR_NAME_PROFILE(x, os)
 
 class LogDuration
 {

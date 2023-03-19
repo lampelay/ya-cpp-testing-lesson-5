@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "search_server.h"
+#include "log_duration.h"
 
 using namespace std::string_literals;
 
@@ -90,6 +91,7 @@ int SearchServer::GetDocumentCount() const { return documents_.size(); }
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(
     const std::string &raw_query, int document_id) const
 {
+    LOG_DURATION_STREAM("Operation time", std::cout);
     const Query query = ParseQuery(raw_query);
     std::vector<std::string> matched_words;
     for (const std::string &word : query.plus_words)

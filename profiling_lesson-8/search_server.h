@@ -8,6 +8,7 @@
 
 #include "string_processing.h"
 #include "document.h"
+#include "log_duration.h"
 
 class SearchServer
 {
@@ -117,6 +118,7 @@ template <typename Predicate>
 std::vector<Document> SearchServer::FindTopDocuments(const std::string &raw_query,
                                                      const Predicate predicate) const
 {
+    LOG_DURATION_STREAM("Operation time", std::cout);
     const Query query = ParseQuery(raw_query);
     std::vector<Document> matched_documents = FindAllDocuments(query, predicate);
     std::sort(
